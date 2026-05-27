@@ -3,6 +3,8 @@
 namespace Smol
 {
     bool GameMainLoop::Initialize() {
+        world.CreateEntity(Vec2(100, 100));
+
         return true;
     }
 

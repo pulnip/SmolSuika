@@ -22,7 +22,7 @@ namespace Smol
         u32 width, height;
     };
     struct Force {
-        Vec3 value;
+        Vec2 value = Vec2(0, 0);
     };
 
     template<typename... Ts>
@@ -73,10 +73,14 @@ namespace Smol
         std::vector<Sprite> sprites;
         std::vector<Force> forces;
 
+        using EntityID = usize;
+
     public:
         World() = default;
         ~World() = default;
         SMOL_DECLARE_PINNED(World)
+
+        EntityID CreateEntity(Vec2 position);
 
         template<typename... Ts>
         QueryView<Ts...> query() {

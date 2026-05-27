@@ -10,10 +10,15 @@ namespace Smol
 
     bool GameMainLoop::Update() {
         // Manually sorted ECS System
-        boundarySystem.Update(world);
+
+        // [UpdateBefore(ForceSystem)]
+        collisionSystem.Update(world);
+        // [UpdateBefore(IntegrateSystem)]
         forceSystem.Update(world);
 
         integrateSystem.Update(world);
+        // [UpdateAfter(IntegrateSystem)]
+        boundarySystem.Update(world);
 
         return true;
     }

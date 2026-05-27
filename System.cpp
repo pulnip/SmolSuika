@@ -14,6 +14,10 @@ namespace Smol
         }
     }
 
+    void CollisionSystem::Update(World& world) {
+
+    }
+
     void ForceSystem::Update(World& world) {
         for (auto [transform, force] : world.query<Transform, Force>()) {
 

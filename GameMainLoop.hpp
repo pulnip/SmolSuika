@@ -11,6 +11,7 @@ namespace Smol
         World world;
 
         BoundarySystem boundarySystem;
+        CollisionSystem collisionSystem;
         ForceSystem forceSystem;
         IntegrateSystem integrateSystem;
         RenderSystem renderSystem;

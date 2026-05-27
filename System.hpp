@@ -20,6 +20,11 @@ namespace Smol
         void Update(World&) override;
     };
 
+    class CollisionSystem final : public System {
+    public:
+        void Update(World&) override;
+    };
+
     class ForceSystem final : public System {
     public:
         void Update(World&) override;

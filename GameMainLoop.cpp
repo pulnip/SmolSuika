@@ -13,6 +13,7 @@ namespace Smol
         timer.NewFrame();
 
         [[unlikely]] if (mouseState.leftPressed) {
+            // centi-meters
             Vec2 screenPos(f32(mouseState.x), f32(mouseState.y));
             world.CreateEntity(screenPos);
         }

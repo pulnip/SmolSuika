@@ -18,8 +18,8 @@ namespace Smol
         constexpr f32 restitution = 0.2f, tangentialKeep = 0.7f;
 
         for (auto [transform, collider, velocity] : world.query<
-            Transform, SphereCollider, Velocity>()
-        ) {
+            Transform, SphereCollider, Velocity
+        >()) {
             auto pos = transform.position;
             auto vel = velocity.value;
             auto r = collider.radius;
@@ -55,8 +55,8 @@ namespace Smol
         auto dt = world.GetDeltaTime();
 
         for (auto [transform, velocity] : world.query<
-            Transform, Velocity>()
-        ) {
+            Transform, Velocity
+        >()) {
             auto pos = transform.position;
             auto vel = velocity.value;
 

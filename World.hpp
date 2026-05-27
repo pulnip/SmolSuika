@@ -71,7 +71,7 @@ namespace Smol
     public:
         World() = default;
         ~World() = default;
-        DECLARE_PINNED(World)
+        SMOL_DECLARE_PINNED(World)
 
         template<typename... Ts>
         QueryView<Ts...> query() {

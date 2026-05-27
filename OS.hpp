@@ -22,7 +22,7 @@ namespace Smol
 	public:
 		OS(const WindowConfig&);
 		~OS();
-        DECLARE_PINNED(OS)
+        SMOL_DECLARE_PINNED(OS)
 
 		void Run(MainLoop& mainLoop);
 

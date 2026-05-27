@@ -6,7 +6,7 @@ namespace Smol
 {
     class MainLoop {
     public:
-        DECLARE_INTERFACE(MainLoop)
+        SMOL_DECLARE_INTERFACE(MainLoop)
 
         virtual bool Initialize() { return true; }
         virtual bool Update() = 0;

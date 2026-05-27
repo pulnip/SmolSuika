@@ -9,7 +9,7 @@ namespace Smol
     // ECS System Interface
     class System {
     public:
-        DECLARE_INTERFACE(System)
+        SMOL_DECLARE_INTERFACE(System)
 
         virtual void Update(World&) = 0;
     };

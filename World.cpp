@@ -20,7 +20,7 @@ namespace Smol
         renderSystem.Update(*this);
     }
 
-    World::EntityID World::CreateEntity(Vec2 position) {
+    EntityID World::CreateEntity(Vec2 position) {
         constexpr usize ENTITY_SIZE = 100;
 
         transforms.push_back(Transform{

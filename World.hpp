@@ -8,6 +8,8 @@
 
 namespace Smol
 {
+    using EntityID = usize;
+
     struct Transform {
         Vec2 position;
     };
@@ -26,45 +28,79 @@ namespace Smol
         Vec2 value = Vec2(0, 0);
     };
 
-    template<typename... Ts>
-    class QueryView {
+    template<bool IncludeID, bool IsConst, typename... Ts>
+    class ViewImpl {
     private:
-        std::tuple<std::vector<Ts>*...> storages;
+        template<typename T>
+        using StoragePtr = std::conditional_t<
+            IsConst,
+            const std::vector<T>*,
+            std::vector<T>*
+        >;
+        template<typename T>
+        using ElemRef = std::conditional_t<
+            IsConst,
+            const T&,
+            T&
+        >;
+
+        using ReturnType = std::conditional_t<
+            IncludeID,
+            std::tuple<EntityID, ElemRef<Ts>...>,
+            std::tuple<ElemRef<Ts>...>
+        >;
+
+        using StorageTuple = std::tuple<StoragePtr<Ts>...>;
+
+        StorageTuple storages;
         usize count;
 
     public:
-        QueryView(std::vector<Ts>&... s) noexcept
+        ViewImpl(
+            std::conditional_t<IsConst, const std::vector<Ts>&, std::vector<Ts>&>... s
+        ) noexcept
             : storages(&s...)
-            , count(std::get<0>(std::tuple{ s.size()... })) {}
+            , count(std::get<0>(std::tuple{ s.size()... })) {
+        }
+
+        ViewImpl& StartAt(usize start) {
+            count = start;
+
+            return *this;
+        }
 
         struct Iterator {
-            std::tuple<std::vector<Ts>*...> storages;
+            StorageTuple storages;
             usize idx;
 
-            std::tuple<Ts&...> operator*() noexcept {
+            ReturnType operator*() noexcept {
                 return std::apply(
-                    [this](auto*... s) {
-                        return std::tuple<Ts&...>((*s)[idx]...);
+                    [this](auto*... s) -> ReturnType {
+                        if constexpr (IncludeID)
+                            return ReturnType(idx, (*s)[idx]...);
+                        else
+                            return ReturnType((*s)[idx]...);
                     },
                     storages
                 );
             }
-            Iterator& operator++() noexcept {
-                ++idx;
-                return *this;
-            }
-            bool operator!=(const Iterator& other) const noexcept {
-                return idx != other.idx;
-            }
+            Iterator& operator++() noexcept { ++idx; return *this; }
+            bool operator!=(const Iterator& other) const noexcept { return idx != other.idx; }
         };
 
-        Iterator begin() noexcept {
-            return { storages, 0 };
-        }
-        Iterator end() noexcept {
-            return { storages, count };
-        }
+        Iterator begin() noexcept { return { storages, 0 }; }
+        Iterator end()   noexcept { return { storages, count }; }
     };
+
+    template<typename... Ts>
+    using QueryView = ViewImpl<false, false, Ts...>;
+    template<typename... Ts>
+    using ConstQueryView = ViewImpl<false, true, Ts...>;
+
+    template<typename... Ts>
+    using EnumerateView = ViewImpl<true, false, Ts...>;
+    template<typename... Ts>
+    using ConstEnumerateView = ViewImpl<true, true, Ts...>;
 
     class World final {
     private:
@@ -84,8 +120,6 @@ namespace Smol
         // Cache DeltaTime for ECS Systems
         f32 deltaTime = 0.0f;
 
-        using EntityID = usize;
-
     public:
         World() = default;
         ~World() = default;
@@ -96,23 +130,44 @@ namespace Smol
         EntityID CreateEntity(Vec2 position);
 
         template<typename... Ts>
-        QueryView<Ts...> query() {
-            return QueryView<Ts...>(getStorage<Ts>()...);
+        auto query() {
+            return QueryView<Ts...>{ getStorage<Ts>()... };
+        }
+        template<typename... Ts>
+        auto query() const {
+            return ConstQueryView<Ts...>{ getStorage<Ts>()... };
+        }
+        template<typename... Ts>
+        auto cquery() const {
+            return ConstQueryView<Ts...>{ getStorage<Ts>()... };
+        }
+
+        template<typename... Ts>
+        auto enumerate() {
+            return EnumerateView<Ts...>{ getStorage<Ts>()... };
+        }
+        template<typename... Ts>
+        auto enumerate() const {
+            return ConstEnumerateView<Ts...>{ getStorage<Ts>()... };
+        }
+        template<typename... Ts>
+        auto cenumerate() const {
+            return ConstEnumerateView<Ts...>{ getStorage<Ts>()... };
         }
 
         f32 GetDeltaTime() const noexcept { return deltaTime; }
 
     private:
         template<typename T>
-        auto& getStorage() noexcept {
+        auto& getStorage(this auto& self) noexcept {
             if constexpr (std::is_same_v<T, Transform>)
-                return transforms;
+                return self.transforms;
             else if constexpr (std::is_same_v<T, SphereCollider>)
-                return sphereColliders;
+                return self.sphereColliders;
             else if constexpr (std::is_same_v<T, Sprite>)
-                return sprites;
+                return self.sprites;
             else if constexpr (std::is_same_v<T, Velocity>)
-                return velocities;
+                return self.velocities;
             else static_assert(sizeof(T) == 0, "Unknown component type");
         }
     };

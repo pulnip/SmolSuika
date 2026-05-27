@@ -145,6 +145,7 @@
   <ItemGroup>
     <ClInclude Include="GameMainLoop.hpp" />
     <ClInclude Include="INC_Windows.h" />
+    <ClInclude Include="Input.hpp" />
     <ClInclude Include="System.hpp" />
     <ClInclude Include="LinearAlgebra.hpp" />
     <ClInclude Include="MainLoop.hpp" />

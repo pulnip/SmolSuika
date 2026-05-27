@@ -1,10 +1,10 @@
 #include <chrono>
 #include "INC_Windows.h"
+#include <windowsx.h>
+#include "Input.hpp"
 #include "MainLoop.hpp"
 #include "OS.hpp"
 #include "Timer.hpp"
-
-LRESULT CALLBACK MyWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
 
 namespace Smol
 {
@@ -18,6 +18,8 @@ namespace Smol
         // Non-stop timer
         Timer sysTimer;
 
+        MouseState mouse;
+
     public:
         Impl(const WindowConfig&);
         ~Impl();
@@ -30,9 +32,31 @@ namespace Smol
         HWND GetWindow() const noexcept { return hWnd; }
 
     private:
-        friend LRESULT CALLBACK::MyWndProc(HWND, UINT, WPARAM, LPARAM);
+        static LRESULT CALLBACK WndProc(HWND, UINT, WPARAM, LPARAM);
+        LRESULT HandleMessage(HWND, UINT, WPARAM, LPARAM);
 
         bool processEvents();
+
+        void onMouseMove(i32 x, i32 y) {
+            mouse.dx += x - mouse.x;
+            mouse.dy += y - mouse.y;
+            mouse.x = x;
+            mouse.y = y;
+        }
+        void onMouseLeftDown(int x, int y) {
+            mouse.leftDown = true;
+            mouse.leftPressed = true;
+            mouse.x = x;
+            mouse.y = y;
+        }
+        void onMouseLeftUp(int x, int y) {
+            mouse.leftDown = false;
+            mouse.leftReleased = true;
+        }
+        void consumeFrameInput() {
+            mouse.dx = mouse.dy = 0;
+            mouse.leftPressed = mouse.leftReleased = false;
+        }
     };
 
     OS::OS(const WindowConfig& cfg)
@@ -45,7 +69,7 @@ namespace Smol
         WNDCLASSEX wc{
             sizeof(WNDCLASSEX),
             CS_CLASSDC,
-            MyWndProc,
+            WndProc,
             0L, 0L,
             GetModuleHandle(NULL),
             nullptr,
@@ -75,7 +99,7 @@ namespace Smol
             nullptr,
             nullptr,
             wc.hInstance,
-            nullptr
+            this
         );
         if (hWnd == nullptr) {
             throw std::runtime_error("Failed to create window");
@@ -112,10 +136,13 @@ namespace Smol
         while (true) {
             sysTimer.NewFrame();
 
+            const auto inputSnapshot = mouse;
+            consumeFrameInput();
+
             [[unlikely]] if (!processEvents())
                 break;
 
-            [[unlikely]] if (!mainLoop.Update())
+            [[unlikely]] if (!mainLoop.Update(inputSnapshot))
                 break;
 
             [[unlikely]] if (!mainLoop.Render())
@@ -142,23 +169,51 @@ namespace Smol
         return keepRunning;
     }
 
+    LRESULT CALLBACK OS::Impl::WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam) {
+        if (msg == WM_NCCREATE) {
+            auto cs = reinterpret_cast<CREATESTRUCT*>(lParam);
+            SetWindowLongPtr(
+                hWnd,
+                GWLP_USERDATA,
+                reinterpret_cast<LONG_PTR>(cs->lpCreateParams)
+            );
+            return DefWindowProc(hWnd, msg, wParam, lParam);
+        }
+
+        auto self = reinterpret_cast<Impl*>(GetWindowLongPtr(hWnd, GWLP_USERDATA));
+
+        // before WM_NCCREATE
+        if (self == nullptr)
+            return DefWindowProc(hWnd, msg, wParam, lParam);
+
+        return self->HandleMessage(hWnd, msg, wParam, lParam);
+    }
+
+    LRESULT OS::Impl::HandleMessage(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam) {
+        switch (msg) {
+        case WM_CLOSE:
+            PostQuitMessage(0);
+            break;
+        case WM_MOUSEMOVE:
+            onMouseMove(GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
+            break;
+        case WM_LBUTTONDOWN:
+            SetCapture(hWnd);
+            onMouseLeftDown(GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
+            break;
+        case WM_LBUTTONUP:
+            ReleaseCapture();
+            onMouseLeftUp(GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
+            break;
+        default:
+            return DefWindowProc(hWnd, msg, wParam, lParam);
+        }
+
+        return NULL;
+    }
+
     u32 OS::GetWidth() const noexcept { return impl->GetWidth(); }
     u32 OS::GetHeight() const noexcept { return impl->GetHeight(); }
 
     void* OS::GetWindow() const noexcept { return impl->GetWindow(); }
-}
-
-LRESULT CALLBACK MyWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
-    switch (msg) {
-    case WM_CLOSE: {
-        PostQuitMessage(0);
-    } break;
-    case WM_LBUTTONDOWN: {
-
-    } break;
-    default:
-        return DefWindowProc(hwnd, msg, wParam, lParam);
-    }
-
-    return NULL;
 }

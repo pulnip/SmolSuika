@@ -4,12 +4,14 @@
 
 namespace Smol
 {
+    struct MouseState;
+
     class MainLoop {
     public:
         SMOL_DECLARE_INTERFACE(MainLoop)
 
         virtual bool Initialize() { return true; }
-        virtual bool Update() = 0;
+        virtual bool Update(const MouseState&) = 0;
         virtual bool Render() = 0;
         virtual void Finalize() {}
     };

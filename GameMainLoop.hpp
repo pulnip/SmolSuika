@@ -21,7 +21,7 @@ namespace Smol
         ~GameMainLoop() = default;
 
         bool Initialize();
-        bool Update();
+        bool Update(const MouseState&);
         bool Render();
         void Finalize();
     };

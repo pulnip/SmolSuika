@@ -1,14 +1,16 @@
 #include "GameMainLoop.hpp"
+#include "Input.hpp"
 
 namespace Smol
 {
     bool GameMainLoop::Initialize() {
-        world.CreateEntity(Vec2(100, 100));
-
         return true;
     }
 
-    bool GameMainLoop::Update() {
+    bool GameMainLoop::Update(const MouseState& mouseState) {
+        [[unlikely]] if (mouseState.leftPressed)
+            world.CreateEntity(Vec2(mouseState.x, mouseState.y));
+
         // Manually sorted ECS System
 
         // [UpdateBefore(ForceSystem)]

@@ -30,6 +30,8 @@ namespace Smol
 
         u32 GetWidth() const noexcept;
         u32 GetHeight() const noexcept;
+
+        void* GetWindow() const noexcept;
 	};
 }
 

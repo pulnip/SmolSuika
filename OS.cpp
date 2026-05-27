@@ -27,6 +27,8 @@ namespace Smol
         u32 GetWidth() const noexcept { return width; }
         u32 GetHeight() const noexcept { return height; }
 
+        HWND GetWindow() const noexcept { return hWnd; }
+
     private:
         friend LRESULT CALLBACK::MyWndProc(HWND, UINT, WPARAM, LPARAM);
 
@@ -142,6 +144,8 @@ namespace Smol
 
     u32 OS::GetWidth() const noexcept { return impl->GetWidth(); }
     u32 OS::GetHeight() const noexcept { return impl->GetHeight(); }
+
+    void* OS::GetWindow() const noexcept { return impl->GetWindow(); }
 }
 
 LRESULT CALLBACK MyWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {

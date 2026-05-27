@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Primitives.hpp"
 #include "Semantics.hpp"
 
 namespace Smol
@@ -29,8 +30,16 @@ namespace Smol
         void Update(World&) override;
     };
 
+    // No Renderer, so RenderSystem itself is a Renderer
     class RenderSystem final : public System {
+    private:
+        class Impl;
+        RAII<Impl> impl;
+
     public:
+        RenderSystem();
+        ~RenderSystem();
+
         void Update(World&) override;
     };
 }

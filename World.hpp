@@ -8,13 +8,18 @@
 namespace Smol
 {
     struct Transform {
-        Vec3 position;
+        Vec2 position;
     };
     struct SphereCollider {
         f32 radius;
     };
     struct Sprite {
+        enum class Type {
+            Watermelon
+        } type = Type::Watermelon;
 
+        // Visual Size
+        u32 width, height;
     };
     struct Force {
         Vec3 value;

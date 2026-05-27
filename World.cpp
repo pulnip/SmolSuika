@@ -2,6 +2,24 @@
 
 namespace Smol
 {
+    void World::Update(f32 deltaTime) {
+        this->deltaTime = deltaTime;
+
+        // Manually sorted ECS System
+
+        // [UpdateBefore(ForceSystem)]
+        collisionSystem.Update(*this);
+        // [UpdateBefore(IntegrateSystem)]
+        forceSystem.Update(*this);
+
+        integrateSystem.Update(*this);
+        // [UpdateAfter(IntegrateSystem)]
+        boundarySystem.Update(*this);
+
+        // Update After All System Done
+        renderSystem.Update(*this);
+    }
+
     World::EntityID World::CreateEntity(Vec2 position) {
         constexpr usize ENTITY_SIZE = 100;
 
@@ -20,7 +38,7 @@ namespace Smol
             .height = ENTITY_SIZE
         });
 
-        forces.push_back(Force{
+        velocities.push_back(Velocity{
             .value = Vec2(0.0f, 0.0f)
         });
 

@@ -4,6 +4,7 @@
 #include <vector>
 #include "Primitives.hpp"
 #include "Semantics.hpp"
+#include "System.hpp"
 
 namespace Smol
 {
@@ -21,7 +22,7 @@ namespace Smol
         // Visual Size
         u32 width, height;
     };
-    struct Force {
+    struct Velocity {
         Vec2 value = Vec2(0, 0);
     };
 
@@ -71,7 +72,17 @@ namespace Smol
         std::vector<Transform> transforms;
         std::vector<SphereCollider> sphereColliders;
         std::vector<Sprite> sprites;
-        std::vector<Force> forces;
+        std::vector<Velocity> velocities;
+
+        // ECS-style systems
+        BoundarySystem boundarySystem;
+        CollisionSystem collisionSystem;
+        ForceSystem forceSystem;
+        IntegrateSystem integrateSystem;
+        RenderSystem renderSystem;
+
+        // Cache DeltaTime for ECS Systems
+        f32 deltaTime = 0.0f;
 
         using EntityID = usize;
 
@@ -80,12 +91,16 @@ namespace Smol
         ~World() = default;
         SMOL_DECLARE_PINNED(World)
 
+        void Update(f32 deltaTime);
+
         EntityID CreateEntity(Vec2 position);
 
         template<typename... Ts>
         QueryView<Ts...> query() {
             return QueryView<Ts...>(getStorage<Ts>()...);
         }
+
+        f32 GetDeltaTime() const noexcept { return deltaTime; }
 
     private:
         template<typename T>
@@ -96,8 +111,8 @@ namespace Smol
                 return sphereColliders;
             else if constexpr (std::is_same_v<T, Sprite>)
                 return sprites;
-            else if constexpr (std::is_same_v<T, Force>)
-                return forces;
+            else if constexpr (std::is_same_v<T, Velocity>)
+                return velocities;
             else static_assert(sizeof(T) == 0, "Unknown component type");
         }
     };

@@ -4,30 +4,27 @@
 namespace Smol
 {
     bool GameMainLoop::Initialize() {
+        timer.Reset();
+
         return true;
     }
 
     bool GameMainLoop::Update(const MouseState& mouseState) {
-        [[unlikely]] if (mouseState.leftPressed)
-            world.CreateEntity(Vec2(mouseState.x, mouseState.y));
+        timer.NewFrame();
 
-        // Manually sorted ECS System
+        [[unlikely]] if (mouseState.leftPressed) {
+            Vec2 screenPos(f32(mouseState.x), f32(mouseState.y));
+            world.CreateEntity(screenPos);
+        }
 
-        // [UpdateBefore(ForceSystem)]
-        collisionSystem.Update(world);
-        // [UpdateBefore(IntegrateSystem)]
-        forceSystem.Update(world);
-
-        integrateSystem.Update(world);
-        // [UpdateAfter(IntegrateSystem)]
-        boundarySystem.Update(world);
+        auto deltaTime = static_cast<f32>(timer.GetDeltaTime());
+        world.Update(deltaTime);
 
         return true;
     }
 
     bool GameMainLoop::Render() {
-        renderSystem.Update(world);
-
+        // Delegate Rendering Task to RenderSystem
         return true;
     }
 

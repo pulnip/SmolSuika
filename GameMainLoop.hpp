@@ -1,20 +1,15 @@
 #pragma once
 
 #include "MainLoop.hpp"
-#include "System.hpp"
+#include "Timer.hpp"
 #include "World.hpp"
 
 namespace Smol
 {
     class GameMainLoop final : public MainLoop {
     private:
+        Timer timer;
         World world;
-
-        BoundarySystem boundarySystem;
-        CollisionSystem collisionSystem;
-        ForceSystem forceSystem;
-        IntegrateSystem integrateSystem;
-        RenderSystem renderSystem;
 
     public:
         GameMainLoop() = default;

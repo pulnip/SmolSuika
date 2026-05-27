@@ -65,7 +65,10 @@ namespace Smol
         singleton = this;
     }
 
-    OS::Impl::Impl(const WindowConfig& windowConfig) {
+    OS::Impl::Impl(const WindowConfig& windowConfig)
+        : width(windowConfig.width)
+        , height(windowConfig.height)
+    {
         WNDCLASSEX wc{
             sizeof(WNDCLASSEX),
             CS_CLASSDC,
@@ -83,8 +86,8 @@ namespace Smol
         RegisterClassEx(&wc);
 
         RECT rect{
-            0,
-            0,
+             0,
+             0,
             static_cast<LONG>(windowConfig.width),
             static_cast<LONG>(windowConfig.height)
         };

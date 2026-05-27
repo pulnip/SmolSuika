@@ -37,6 +37,20 @@ namespace Smol
     template<typename T>
     using RAII = std::unique_ptr<T>;
 
+    struct Vec2 {
+        f32 x = 0.0f, y = 0.0f;
+
+        constexpr auto& operator[](this auto& self, usize i) noexcept {
+            switch (i) {
+            case 0: return self.x;
+            case 1: return self.y;
+            default:
+                std::unreachable();
+            }
+        }
+    };
+
+
     struct Vec3 {
         f32 x = 0.0f, y = 0.0f, z = 0.0f;
 
@@ -49,5 +63,13 @@ namespace Smol
                 std::unreachable();
             }
         }
+
+        constexpr explicit operator Vec2() const noexcept {
+            return { x, y };
+        }
     };
+
+    inline constexpr Vec3 toVec3(Vec2 v, f32 z = 0.0f) noexcept {
+        return { v.x, v.y, z };
+    }
 }

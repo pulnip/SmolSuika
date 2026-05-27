@@ -7,6 +7,73 @@
 
 namespace Smol
 {
+    inline constexpr Vec2 operator+(Vec2 lhs, Vec2 rhs) noexcept {
+        return { lhs.x + rhs.x, lhs.y + rhs.y };
+    }
+    inline constexpr Vec2& operator+=(Vec2& lhs, Vec2 rhs) noexcept {
+        lhs.x += rhs.x;
+        lhs.y += rhs.y;
+        return lhs;
+    }
+    inline constexpr Vec2 operator-(Vec2 v) noexcept {
+        return { -v.x, -v.y };
+    }
+    inline constexpr Vec2 operator-(Vec2 lhs, Vec2 rhs) noexcept {
+        return { lhs.x - rhs.x, lhs.y - rhs.y };
+    }
+    inline constexpr Vec2& operator-=(Vec2& lhs, Vec2 rhs) noexcept {
+        lhs.x -= rhs.x;
+        lhs.y -= rhs.y;
+        return lhs;
+    }
+    inline constexpr Vec2 operator*(Vec2 lhs, Vec2 rhs) noexcept {
+        return { lhs.x * rhs.x, lhs.y * rhs.y };
+    }
+    inline constexpr Vec2& operator*=(Vec2& lhs, Vec2 rhs) noexcept {
+        lhs.x *= rhs.x;
+        lhs.y *= rhs.y;
+        return lhs;
+    }
+    inline constexpr Vec2 operator*(f32 f, Vec2 v) noexcept {
+        return { f * v.x, f * v.y };
+    }
+    inline constexpr Vec2 operator*(Vec2 v, f32 f) noexcept {
+        return f * v;
+    }
+    inline constexpr Vec2& operator*=(Vec2& v, f32 f) noexcept {
+        v.x *= f;
+        v.y *= f;
+        return v;
+    }
+    inline constexpr Vec2 operator/(Vec2 v, f32 f) noexcept {
+        return { v.x / f, v.y / f };
+    }
+    inline constexpr Vec2& operator/=(Vec2& v, f32 f) noexcept {
+        v.x /= f;
+        v.y /= f;
+        return v;
+    }
+
+    inline constexpr bool operator==(Vec2 lhs, Vec2 rhs) noexcept {
+        return lhs.x == rhs.x && lhs.y == rhs.y;
+    }
+
+    inline constexpr f32 dot(Vec2 lhs, Vec2 rhs) noexcept {
+        return lhs.x * rhs.x + lhs.y * rhs.y;
+    }
+    inline constexpr f32 normSquared(Vec2 v) noexcept {
+        return dot(v, v);
+    }
+    inline f32 norm(Vec2 v) noexcept {
+        return std::sqrt(normSquared(v));
+    }
+    inline Vec2 normalize(Vec2 v) noexcept {
+        return v / norm(v);
+    }
+    inline constexpr f32 cross(Vec2 lhs, Vec2 rhs) noexcept {
+        return lhs.x * rhs.y - lhs.y * rhs.x;
+    }
+
     inline constexpr Vec3 zeros() noexcept {
         return { 0.0f, 0.0f, 0.0f };
     }

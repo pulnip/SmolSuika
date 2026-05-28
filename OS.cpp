@@ -93,10 +93,13 @@ namespace Smol
         };
         AdjustWindowRect(&rect, WS_OVERLAPPEDWINDOW, FALSE);
 
+        constexpr bool resizable = false;
+
         hWnd = CreateWindow(
             wc.lpszClassName,
             windowConfig.title,
-            WS_OVERLAPPEDWINDOW,
+            WS_OVERLAPPEDWINDOW &
+                (resizable ? 0 : ~(WS_THICKFRAME | WS_MAXIMIZEBOX)),
             CW_USEDEFAULT, CW_USEDEFAULT,
             rect.right - rect.left, rect.bottom - rect.top,
             nullptr,

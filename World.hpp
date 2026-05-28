@@ -3,6 +3,7 @@
 #include <tuple>
 #include <vector>
 #include "Primitives.hpp"
+#include "RenderSystem.hpp"
 #include "Semantics.hpp"
 #include "System.hpp"
 

@@ -7,10 +7,10 @@ namespace Smol
 
         // Manually sorted ECS System
 
-        // [UpdateBefore(ForceSystem)]
-        collisionSystem.Update(*this);
-        // [UpdateBefore(IntegrateSystem)]
+        // [UpdateBefore(CollisionSystem)]
         forceSystem.Update(*this);
+        // [UpdateBefore(IntegrateSystem)]
+        collisionSystem.Update(*this);
 
         integrateSystem.Update(*this);
         // [UpdateAfter(IntegrateSystem)]

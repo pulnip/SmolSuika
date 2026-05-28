@@ -75,7 +75,7 @@ namespace Smol
 
             ReturnType operator*() noexcept {
                 return std::apply(
-                    [this](auto*... s) -> ReturnType {
+                    [idx=idx](auto*... s) -> ReturnType {
                         if constexpr (IncludeID)
                             return ReturnType(idx, (*s)[idx]...);
                         else
@@ -155,7 +155,7 @@ namespace Smol
             return ConstEnumerateView<Ts...>{ getStorage<Ts>()... };
         }
 
-        f32 GetDeltaTime() const noexcept { return deltaTime; }
+        f32 GetDeltaTime() const noexcept { return std::min(deltaTime, 0.1f); }
 
     private:
         template<typename T>

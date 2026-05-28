@@ -117,7 +117,9 @@ namespace Smol
         constexpr f32 kSeparationBias = 10.0f;       // penetration → velocity 변환 rate
         constexpr f32 kMaxSeparationSpeed = 5.0f;    // 깊은 침투에서 폭발 방지
 
-        for (auto [id, t, v, c] : world.enumerate<Transform, Velocity, SphereCollider>()) {
+        for (auto [id, t, v, c] : world.enumerate<
+            Transform, Velocity, SphereCollider
+        >()) {
             auto it = contactMap.find(id);
             if (it == contactMap.end())
                 continue;
@@ -136,24 +138,24 @@ namespace Smol
     }
 
     void ForceSystem::Update(World& world) {
-        
+        Vec2 gravity(0.0f, 980.0f); // 980 cm/s^2
+        auto dt = world.GetDeltaTime();
+
+        auto dvel = gravity * dt;
+
+        for (auto [velocity] : world.query<Velocity>()) {
+            velocity.value += dvel;
+        }
     }
 
     void IntegrateSystem::Update(World& world) {
-        Vec2 gravity(0.0f, 980.0f); // 980 cm/s^2
         auto dt = world.GetDeltaTime();
 
         for (auto [transform, velocity] : world.query<
             Transform, Velocity
         >()) {
-            auto pos = transform.position;
-            auto vel = velocity.value;
-
-            vel += gravity * dt;
-            pos += vel * dt;
-
-            transform.position = pos;
-            velocity.value = vel;
+            auto dpos = velocity.value * dt;
+            transform.position += dpos;
         }
     }
 

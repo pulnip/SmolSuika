@@ -172,7 +172,7 @@ namespace Smol
 
         hBackDC;
 
-        for (auto [transform, sprite] : world.query<Transform, Sprite>()) {
+        for (auto [transform, sprite] : world.cquery<Transform, Sprite>()) {
             auto hBitmapDC = CreateCompatibleDC(hBackDC);
 
             using enum Sprite::Type;

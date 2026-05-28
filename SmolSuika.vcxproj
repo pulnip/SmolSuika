@@ -135,6 +135,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="CollisionSystem.cpp" />
     <ClCompile Include="GameMainLoop.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="OS.cpp" />
@@ -144,6 +145,7 @@
     <ClCompile Include="World.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="CollisionSystem.hpp" />
     <ClInclude Include="GameMainLoop.hpp" />
     <ClInclude Include="INC_Windows.h" />
     <ClInclude Include="Input.hpp" />

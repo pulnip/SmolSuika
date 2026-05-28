@@ -2,6 +2,7 @@
 
 #include <tuple>
 #include <vector>
+#include "CollisionSystem.hpp"
 #include "Primitives.hpp"
 #include "RenderSystem.hpp"
 #include "Semantics.hpp"

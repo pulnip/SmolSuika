@@ -23,9 +23,12 @@ namespace Smol
     EntityID World::CreateEntity(Vec2 position) {
         constexpr usize ENTITY_SIZE = 100;
 
-        transforms.push_back(Transform{
-            .position = position
+        rigidbodies.push_back(Rigidbody{
+            .invMass = 1.0f,
+            .restitution = 0.2f,
+            .friction = 0.4f
         });
+
         sphereColliders.push_back(SphereCollider{
             .radius = ENTITY_SIZE / 2.0f
         });
@@ -38,6 +41,10 @@ namespace Smol
             .height = ENTITY_SIZE
         });
 
+        transforms.push_back(Transform{
+            .position = position
+        });
+        
         velocities.push_back(Velocity{
             .value = Vec2(0.0f, 0.0f)
         });

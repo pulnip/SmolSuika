@@ -12,11 +12,10 @@ namespace Smol
 {
     using EntityID = usize;
 
-    struct Transform {
-        Vec2 position;
-    };
-    struct SphereCollider {
-        f32 radius;
+    struct Rigidbody {
+        f32 invMass = 1.0f;
+        f32 restitution = 0.2f;
+        f32 friction = 0.4f;
     };
     struct Sprite {
         enum class Type {
@@ -25,6 +24,12 @@ namespace Smol
 
         // Visual Size
         u32 width, height;
+    };
+    struct SphereCollider {
+        f32 radius;
+    };
+    struct Transform {
+        Vec2 position;
     };
     struct Velocity {
         Vec2 value = Vec2(0, 0);
@@ -107,9 +112,10 @@ namespace Smol
     class World final {
     private:
         // ECS-style components
-        std::vector<Transform> transforms;
+        std::vector<Rigidbody> rigidbodies;
         std::vector<SphereCollider> sphereColliders;
         std::vector<Sprite> sprites;
+        std::vector<Transform> transforms;
         std::vector<Velocity> velocities;
 
         // ECS-style systems
@@ -162,12 +168,14 @@ namespace Smol
     private:
         template<typename T>
         auto& getStorage(this auto& self) noexcept {
-            if constexpr (std::is_same_v<T, Transform>)
-                return self.transforms;
+            if constexpr (std::is_same_v<T, Rigidbody>)
+                return self.rigidbodies;
             else if constexpr (std::is_same_v<T, SphereCollider>)
                 return self.sphereColliders;
             else if constexpr (std::is_same_v<T, Sprite>)
                 return self.sprites;
+            else if constexpr (std::is_same_v<T, Transform>)
+                return self.transforms;
             else if constexpr (std::is_same_v<T, Velocity>)
                 return self.velocities;
             else static_assert(sizeof(T) == 0, "Unknown component type");

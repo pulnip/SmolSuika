@@ -3,100 +3,156 @@
 #include <vector>
 #include "CollisionSystem.hpp"
 #include "LinearAlgebra.hpp"
+#include "OS.hpp"
 #include "Primitives.hpp"
 #include "World.hpp"
 
 namespace Smol
 {
+    constexpr f32 kEps = 1e-5f;
+    constexpr int kVelIters = 6;
+    constexpr int kPosIters = 3;
+    constexpr f32 kRestThreshold = 50.0f;
+    constexpr f32 kPenSlop = 0.5f;
+    constexpr f32 kBaumgarte = 0.2f;
+
+    struct SolverBody {
+        Vec2  pos, vel;
+        f32   radius, invMass, restitution, friction;
+        Vec2* dstPos = nullptr;   // null = wall
+        Vec2* dstVel = nullptr;
+    };
     struct Contact {
-        Vec2 normal; // 단위벡터, 이 body 기준 바깥 방향
-        f32 penetration; // overlap 깊이 (>0)
+        u32  a, b;
+        Vec2 normal, tangent;     // a → b
+        f32  penetration, velocityBias;
+        f32  normalImpulse = 0.0f;
+        f32  tangentImpulse = 0.0f;
     };
 
-    constexpr f32 kEps = 1e-5f;
-
-    static Vec2 ConeClip(Vec2 v, const std::vector<Contact>& contacts) {
-        if (contacts.empty()) return v;
-
-        auto isFeasible = [&contacts](Vec2 x) -> bool {
-            for (const auto& c : contacts) {
-                if (dot(x, c.normal) < -kEps) return false;
-            }
-            return true;
-            };
-
-        // already satisfy all constraints
-        if (isFeasible(v)) return v;
-
-        // for each unsatisfied i
-        // projection to boundary
-        Vec2 best = Vec2(0, 0);
-        f32  bestDist2 = std::numeric_limits<f32>::infinity();
-        bool found = false;
-
-        for (const auto& c : contacts) {
-            f32 d = dot(v, c.normal);
-            if (d >= -kEps) continue;             // 위반 아닌 제약은 스킵
-
-            Vec2 p = v - d * c.normal;            // boundary line으로 perpendicular foot
-            if (!isFeasible(p)) continue;         // 다른 제약 위반 → 폐기
-
-            f32 dist2 = d * d;                    // |p - v|^2 = dot(v, n_i)^2
-            if (dist2 < bestDist2) {
-                bestDist2 = dist2;
-                best = p;
-                found = true;
-            }
-        }
-        return found ? best : Vec2(0, 0);
-    }
-
     void CollisionSystem::Update(World& world) {
-        std::unordered_map<EntityID, std::vector<Contact>> contactMap;
+        const f32 W = static_cast<f32>(OS_->GetWidth());
+        const f32 H = static_cast<f32>(OS_->GetHeight());
 
-        // Phase 1: Collect Contact
-        for (auto [id0, t0, v0, c0] : world.cenumerate<
-            Transform, Velocity, SphereCollider
+        // 1. Collect SolverBody
+        std::vector<SolverBody> bodies;
+        for (auto [t, v, c, rb] : world.query<
+            Transform, Velocity, SphereCollider, Rigidbody
         >()) {
-            for (auto [id1, t1, v1, c1] : world.cenumerate<
-                Transform, Velocity, SphereCollider
-            >().StartAt(id0 + 1)) {
+            bodies.push_back(SolverBody{
+                .pos = t.position,
+                .vel = v.value,
+                .radius = c.radius,
 
-                Vec2 delta = t1.position - t0.position;
-                f32  distSq = normSquared(delta);
-                f32  sumR = c0.radius + c1.radius;
-                if (distSq >= sumR * sumR) continue;
+                .invMass = rb.invMass,
+                .restitution = rb.restitution,
+                .friction = rb.friction,
 
+                .dstPos = &t.position,
+                .dstVel = &v.value
+                });
+        }
+
+        const u32 nDyn = (u32)bodies.size();
+        const u32 wall = nDyn;
+        constexpr f32 kWallRest = 0.1f;
+        constexpr f32 kWallFriction = 0.5f;
+
+        bodies.push_back(SolverBody{
+            .pos = {0, 0},
+            .vel = {0, 0},
+            .radius = 0.0f,
+            .invMass = 0.0f,
+            .restitution = kWallRest,
+            .friction = kWallFriction
+        });
+
+        // 2. Calculate Contact
+        std::vector<Contact> contacts;
+        auto make = [&](u32 a, u32 b, Vec2 n, f32 pen) {
+            f32 e = std::min(bodies[a].restitution, bodies[b].restitution);
+            f32 vn = dot(bodies[b].vel - bodies[a].vel, n);
+
+            contacts.push_back(Contact{
+                .a = a,
+                .b = b,
+                .normal = n,
+                .tangent = Vec2(-n.y, n.x),
+                .penetration = pen,
+                .velocityBias = (vn < -kRestThreshold) ? -e * vn : 0.0f
+            });
+        };
+
+        // 2.1. circle vs circle
+        for (u32 i = 0; i < nDyn; ++i) {
+            for (u32 j = i + 1; j < nDyn; ++j) {
+                Vec2 d = bodies[j].pos - bodies[i].pos;
+                f32  distSq = dot(d, d);
+                f32  rsum = bodies[i].radius + bodies[j].radius;
+                if (distSq >= rsum * rsum) continue;
                 f32  dist = std::sqrt(distSq);
-                Vec2 dir = (dist > kEps) ? delta / dist : Vec2(1, 0);  // body0→body1 (degenerate fallback)
-                f32  pen = sumR - dist;
-
-                contactMap[id0].push_back({ -dir, pen });   // body0 입장에선 body1 반대쪽이 outward
-                contactMap[id1].push_back({ dir, pen });
+                Vec2 n = (dist > kEps) ? d / dist : Vec2(1, 0);  // i → j
+                make(i, j, n, rsum - dist);
             }
         }
 
-        // ── Phase 2: body마다 separation + cone-clip
-        constexpr f32 kSeparationBias = 10.0f;       // penetration → velocity 변환 rate
-        constexpr f32 kMaxSeparationSpeed = 5.0f;    // 깊은 침투에서 폭발 방지
+        // 2.2. circle vs wall
+        for (u32 i = 0; i < nDyn; ++i) {
+            f32 r = bodies[i].radius; Vec2 p = bodies[i].pos;
+            if (p.y + r > H) make(i, wall, Vec2(0, 1), (p.y + r) - H);
+            if (p.y - r < 0) make(i, wall, Vec2(0, -1), -(p.y - r));
+            if (p.x - r < 0) make(i, wall, Vec2(-1, 0), -(p.x - r));
+            if (p.x + r > W) make(i, wall, Vec2(1, 0), (p.x + r) - W);
+        }
 
-        for (auto [id, t, v, c] : world.enumerate<
-            Transform, Velocity, SphereCollider
-        >()) {
-            auto it = contactMap.find(id);
-            if (it == contactMap.end())
-                continue;
-            const auto& contacts = it->second;
+        // 3. Solve Velocity
+        for (int it = 0; it < kVelIters; ++it) {
+            for (auto& c : contacts) {
+                auto& A = bodies[c.a]; auto& B = bodies[c.b];
+                f32 invSum = A.invMass + B.invMass;
+                if (invSum <= 0.0f) continue;
 
-            // (1) penalty-style separation: outward normal로 밀어내는 velocity 추가
-            //     이건 정의상 cone에 feasible(dot(sep, n)>=0)이라 다음 단계에서 안 깎임
-            for (const auto& contact : contacts) {
-                f32 sepSpeed = std::min(contact.penetration * kSeparationBias, kMaxSeparationSpeed);
-                v.value += contact.normal * sepSpeed;
+                // normal
+                f32 vn = dot(B.vel - A.vel, c.normal);
+                f32 dPn = -(vn - c.velocityBias) / invSum;
+                f32 oldPn = c.normalImpulse;
+                c.normalImpulse = std::max(oldPn + dPn, 0.0f);
+                dPn = c.normalImpulse - oldPn;
+                Vec2 Pn = dPn * c.normal;
+                A.vel -= Pn * A.invMass;
+                B.vel += Pn * B.invMass;
+
+                // friction (Coulomb cone: |jt| <= mu * jn)
+                f32 vt = dot(B.vel - A.vel, c.tangent);
+                f32 dPt = -vt / invSum;
+                f32 mu = std::sqrt(A.friction * B.friction);
+                f32 maxF = mu * c.normalImpulse;
+                f32 oldPt = c.tangentImpulse;
+                c.tangentImpulse = std::clamp(oldPt + dPt, -maxF, maxF);
+                dPt = c.tangentImpulse - oldPt;
+                Vec2 Pt = dPt * c.tangent;
+                A.vel -= Pt * A.invMass;
+                B.vel += Pt * B.invMass;
             }
+        }
 
-            // (2) 모든 contact 동시 만족 영역으로 cone-clip (기존 inward 성분 제거)
-            v.value = ConeClip(v.value, contacts);
+        // 4. Correct Position (cached pen, Baumgarte split)
+        for (int it = 0; it < kPosIters; ++it) {
+            for (auto& c : contacts) {
+                auto& A = bodies[c.a]; auto& B = bodies[c.b];
+                f32 invSum = A.invMass + B.invMass;
+                if (invSum <= 0.0f) continue;
+                f32 corr = std::max(c.penetration - kPenSlop, 0.0f) / invSum * kBaumgarte;
+                Vec2 P = corr * c.normal;
+                A.pos -= P * A.invMass;
+                B.pos += P * B.invMass;
+            }
+        }
+
+        // 5. Write back
+        for (auto& b : bodies) {
+            if (b.dstVel) *b.dstVel = b.vel;
+            if (b.dstPos) *b.dstPos = b.pos;
         }
     }
 }
